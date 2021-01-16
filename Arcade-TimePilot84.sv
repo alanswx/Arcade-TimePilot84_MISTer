@@ -190,15 +190,14 @@ parameter CONF_STR = {
 	"DIP;",
 	"-;",
 	"R0,Reset;",
-	"J1,Shot,Missile,Start P1,Coin,Start P2;",
-	"jn,B,A,Start,R,Select;",
+	"J1,Shot,Missile,Start P1,Coin,Start P2,Service;",
+	"jn,B,A,Start,R,Select,L;",
 	"V,v",`BUILD_DATE
 };
 
 wire        forced_scandoubler;
 wire  [1:0] buttons;
 wire [31:0] status;
-wire [10:0] ps2_key;
 
 wire        ioctl_download;
 wire        ioctl_wr;
@@ -234,8 +233,7 @@ hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 	.ioctl_index(ioctl_index),
 
 	.joystick_0(joystick_0),
-	.joystick_1(joystick_1),
-	.ps2_key(ps2_key)
+	.joystick_1(joystick_1)
 );
 
 ////////////////////   CLOCKS   ///////////////////
@@ -255,66 +253,30 @@ pll pll
 
 wire reset = RESET | status[0] | buttons[1];
 
-///////////////////         Keyboard           //////////////////
-
-reg btn_up       = 0;
-reg btn_down     = 0;
-reg btn_left     = 0;
-reg btn_right    = 0;
-reg btn_shot     = 0;
-reg btn_missile  = 0;
-reg btn_coin1    = 0;
-reg btn_coin2    = 0;
-reg btn_1p_start = 0;
-reg btn_2p_start = 0;
-reg btn_service  = 0;
-
-wire pressed = ps2_key[9];
-wire [7:0] code = ps2_key[7:0];
-always @(posedge CLK_49M) begin
-	reg old_state;
-	old_state <= ps2_key[10];
-	if(old_state != ps2_key[10]) begin
-		case(code)
-			'h16: btn_1p_start <= pressed; // 1
-			'h1E: btn_2p_start <= pressed; // 2
-			'h2E: btn_coin1    <= pressed; // 5
-			'h36: btn_coin2    <= pressed; // 6
-			'h46: btn_service  <= pressed; // 9
-
-			'h75: btn_up      <= pressed; // up
-			'h72: btn_down    <= pressed; // down
-			'h6B: btn_left    <= pressed; // left
-			'h74: btn_right   <= pressed; // right
-			'h14: btn_shot    <= pressed; // ctrl						
-			'h11: btn_missile <= pressed; // alt						
-		endcase
-	end
-end
-
 //////////////////  Arcade Buttons/Interfaces   ///////////////////////////
 
 //Player 1
-wire m_up1      = btn_up      | joystick_0[3];
-wire m_down1    = btn_down    | joystick_0[2];
-wire m_left1    = btn_left    | joystick_0[1];
-wire m_right1   = btn_right   | joystick_0[0];
-wire m_shot1    = btn_shot    | joystick_0[4];
-wire m_missile1 = btn_missile | joystick_0[5];
+wire m_up1      = joystick_0[3];
+wire m_down1    = joystick_0[2];
+wire m_left1    = joystick_0[1];
+wire m_right1   = joystick_0[0];
+wire m_shot1    = joystick_0[4];
+wire m_missile1 = joystick_0[5];
 
 //Player 2
-wire m_up2      = btn_up      | joystick_1[3];
-wire m_down2    = btn_down    | joystick_1[2];
-wire m_left2    = btn_left    | joystick_1[1];
-wire m_right2   = btn_right   | joystick_1[0];
-wire m_shot2    = btn_shot    | joystick_1[4];
-wire m_missile2 = btn_missile | joystick_1[5];
+wire m_up2      = joystick_1[3];
+wire m_down2    = joystick_1[2];
+wire m_left2    = joystick_1[1];
+wire m_right2   = joystick_1[0];
+wire m_shot2    = joystick_1[4];
+wire m_missile2 = joystick_1[5];
 
 //Start/coin
-wire m_start1   = btn_1p_start | joy[6];
-wire m_start2   = btn_2p_start | joy[8];
-wire m_coin1    = btn_coin1    | joy[7];
-wire m_coin2    = btn_coin2;
+wire m_start1   = joy[6];
+wire m_start2   = joy[8];
+wire m_coin1    = joy[7];
+wire m_coin2    = 1'b0;
+wire m_service  = joy[9];
 
 reg [7:0] dip_sw[8];	// Active-LOW
 reg [7:0] is_set3;
@@ -375,7 +337,7 @@ TimePilot84 TP84_inst
 	.p1_buttons({1'b1, ~m_missile1, ~m_shot1}),
 	.p2_buttons({~m_missile2, ~m_shot2}),
 	
-	.btn_service(~btn_service),
+	.btn_service(~m_service),
 
 	.dip_sw({~dip_sw[1], ~dip_sw[0]}),                     // input [15:0] dip_sw
 	
